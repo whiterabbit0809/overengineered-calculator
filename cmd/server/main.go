@@ -8,17 +8,21 @@ import (
 	"time"
 
 	"github.com/whiterabbit0809/overengineered-calculator/internal/auth"
+	"github.com/whiterabbit0809/overengineered-calculator/internal/calculator"
+	"github.com/whiterabbit0809/overengineered-calculator/internal/history"
 	httpserver "github.com/whiterabbit0809/overengineered-calculator/internal/http"
 	"github.com/whiterabbit0809/overengineered-calculator/internal/storage"
 )
 
 func main() {
+	// --- DB connection ---
 	db, err := storage.NewPostgresDB()
 	if err != nil {
 		log.Fatalf("failed to connect to db: %v", err)
 	}
 	defer db.Close()
 
+	// --- Auth: repo + service + token service + handler ---
 	userRepo := auth.NewPostgresUserRepository(db)
 	hasher := auth.NewBcryptPasswordHasher()
 	authService := auth.NewAuthService(userRepo, hasher)
@@ -31,8 +35,19 @@ func main() {
 
 	authHandler := auth.NewHandler(authService, tokenService)
 
-	router := httpserver.NewRouter(authHandler, tokenService)
+	// --- History: repo + service + handler ---
+	historyRepo := history.NewPostgresRepository(db)
+	historyService := history.NewService(historyRepo)
+	historyHandler := history.NewHandler(historyService)
 
+	// --- Calculator: service + handler ---
+	calcService := calculator.NewService(historyService)
+	calcHandler := calculator.NewHandler(calcService)
+
+	// --- Router ---
+	router := httpserver.NewRouter(authHandler, tokenService, calcHandler, historyHandler)
+
+	// --- HTTP server ---
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"

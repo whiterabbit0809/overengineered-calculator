@@ -3,6 +3,7 @@ package auth
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 )
 
@@ -30,23 +31,46 @@ type signUpResponse struct {
 
 func (h *Handler) SignUp(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		_ = json.NewEncoder(w).Encode(signUpResponse{
+			Status:  "failed",
+			Message: "method not allowed",
+		})
 		return
 	}
 
 	var req signUpRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "invalid body", http.StatusBadRequest)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		_ = json.NewEncoder(w).Encode(signUpResponse{
+			Status:  "failed",
+			Message: "invalid request body",
+		})
 		return
 	}
 
 	if err := h.service.SignUp(r.Context(), req.Email, req.Password); err != nil {
-		// TODO: better error mapping
-		w.WriteHeader(http.StatusBadRequest)
-		_ = json.NewEncoder(w).Encode(signUpResponse{
-			Status:  "failed",
-			Message: err.Error(),
-		})
+		w.Header().Set("Content-Type", "application/json")
+
+		// Map known domain errors explicitly
+		switch {
+		case errors.Is(err, ErrEmailAlreadyExists):
+			// Error for existing email
+			w.WriteHeader(http.StatusBadRequest)
+			_ = json.NewEncoder(w).Encode(signUpResponse{
+				Status:  "failed",
+				Message: "email already exists",
+			})
+		default:
+			// Generic error
+			w.WriteHeader(http.StatusBadRequest)
+			_ = json.NewEncoder(w).Encode(signUpResponse{
+				Status:  "failed",
+				Message: err.Error(),
+			})
+		}
 		return
 	}
 

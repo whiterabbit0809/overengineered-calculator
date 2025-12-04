@@ -5,6 +5,8 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+
+	"github.com/lib/pq"
 )
 
 // Define repository errors
@@ -31,7 +33,7 @@ func (r *postgresUserRepository) Create(ctx context.Context, user User) error {
 		user.ID, user.Email, user.Password, user.CreatedAt,
 	)
 	if err != nil {
-		// naive duplicate handling (you can improve this by checking constraint name)
+		// Check for unique constraint violation on email
 		if isUniqueViolation(err) {
 			return ErrEmailAlreadyExists
 		}
@@ -55,8 +57,12 @@ func (r *postgresUserRepository) FindByEmail(ctx context.Context, email string) 
 	return u, nil
 }
 
-// isUniqueViolation is left simple - you can refine by checking the error string/code.
+// isUniqueViolation detects Postgres unique-constraint errors (email already exists).
 func isUniqueViolation(err error) bool {
-	// FOR NOW: just a placeholder, you can check err.Error()
+	var pqErr *pq.Error
+	if errors.As(err, &pqErr) {
+		// 23505 = unique_violation
+		return string(pqErr.Code) == "23505"
+	}
 	return false
 }

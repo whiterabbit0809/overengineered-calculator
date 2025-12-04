@@ -8,13 +8,6 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-// TokenClaims defines what we store in the JWT.
-type TokenClaims struct {
-	UserID string `json:"sub"`
-	Email  string `json:"email"`
-	jwt.RegisteredClaims
-}
-
 // TokenService is an interface so we can swap implementation or mock in tests.
 type TokenService interface {
 	GenerateToken(user *User) (string, error)

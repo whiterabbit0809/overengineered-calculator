@@ -4,7 +4,9 @@ package auth
 import (
 	"context"
 	"errors"
+	"net/mail"
 	"time"
+	"unicode"
 
 	"github.com/google/uuid"
 )
@@ -40,10 +42,48 @@ func NewAuthService(repo UserRepository, hasher PasswordHasher) AuthService {
 	}
 }
 
+func validateEmail(email string) error {
+	if email == "" {
+		return errors.New("email is required")
+	}
+
+	// Basic RFC-ish validation using net/mail
+	if _, err := mail.ParseAddress(email); err != nil {
+		return errors.New("invalid email format")
+	}
+
+	return nil
+}
+
+func validatePassword(pw string) error {
+	if len(pw) < 8 {
+		return errors.New("password must be at least 8 characters")
+	}
+
+	var hasLetter, hasDigit bool
+	for _, r := range pw {
+		switch {
+		case unicode.IsLetter(r):
+			hasLetter = true
+		case unicode.IsDigit(r):
+			hasDigit = true
+		}
+	}
+
+	if !hasLetter || !hasDigit {
+		return errors.New("password must contain at least one letter and one digit")
+	}
+
+	return nil
+}
+
 func (s *authService) SignUp(ctx context.Context, email, password string) error {
-	// TODO: add better email/password validation later
-	if email == "" || password == "" {
-		return errors.New("email and password required")
+	// email/password validation
+	if err := validateEmail(email); err != nil {
+		return err
+	}
+	if err := validatePassword(password); err != nil {
+		return err
 	}
 
 	hash, err := s.hasher.HashPassword(password)
@@ -59,8 +99,12 @@ func (s *authService) SignUp(ctx context.Context, email, password string) error 
 	}
 
 	if err := s.repo.Create(ctx, user); err != nil {
+		if errors.Is(err, ErrEmailAlreadyExists) {
+			return ErrEmailAlreadyExists
+		}
 		return err
 	}
+
 	return nil
 }
 

@@ -1,126 +1,177 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <title>Over-engineered Calculator Auth</title>
-</head>
-<body>
-  <h1>Auth demo</h1>
+<script>
+  const baseUrl = '/api/v1';
 
-  <section>
-    <h2>Sign up</h2>
-    <form id="signup-form">
-      <input type="email" id="signup-email" placeholder="Email" required />
-      <input type="password" id="signup-password" placeholder="Password" required />
-      <button type="submit">Sign up</button>
-    </form>
-    <div id="signup-result"></div>
-  </section>
+  // --- SIGNUP ---
+  document.getElementById('signup-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const email = document.getElementById('signup-email').value;
+    const password = document.getElementById('signup-password').value;
 
-  <section>
-    <h2>Login</h2>
-    <form id="login-form">
-      <input type="email" id="login-email" placeholder="Email" required />
-      <input type="password" id="login-password" placeholder="Password" required />
-      <button type="submit">Login</button>
-    </form>
-    <div id="login-result"></div>
-  </section>
-
-  <!-- New section for testing the protected endpoint -->
-  <section id="secret-section" style="display:none; margin-top: 2rem;">
-    <h2>Secret hello</h2>
-    <button id="secret-button">Call /api/v1/secret-hello</button>
-    <pre id="secret-result"></pre>
-  </section>
-
-  <script>
-    const baseUrl = '/api/v1';
-
-    // --- SIGNUP ---
-    document.getElementById('signup-form').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const email = document.getElementById('signup-email').value;
-      const password = document.getElementById('signup-password').value;
-
-      const res = await fetch(`${baseUrl}/auth/signup`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-      });
-
-      let text = 'Sign up failed';
-      try {
-        const data = await res.json();
-        text = `Sign up: ${data.status}`;
-      } catch (err) {
-        text = `Sign up: HTTP ${res.status}`;
-      }
-
-      document.getElementById('signup-result').innerText = text;
+    const res = await fetch(`${baseUrl}/auth/signup`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
     });
 
-    // --- LOGIN ---
-    document.getElementById('login-form').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const email = document.getElementById('login-email').value;
-      const password = document.getElementById('login-password').value;
-
-      const res = await fetch(`${baseUrl}/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-      });
-
-      let text = 'Login failed';
-      try {
-        const data = await res.json();
-        text = `Login: ${data.status}`;
-
-        if (data.status === 'passed' && data.token) {
-          // Cache the token in localStorage for later use
-          localStorage.setItem('authToken', data.token);
-
-          // Show the secret section now that we have a token
-          document.getElementById('secret-section').style.display = 'block';
-        }
-      } catch (err) {
-        text = `Login: HTTP ${res.status}`;
+    let text = 'Sign up failed';
+    try {
+      const data = await res.json();
+      if (data.status === 'ok') {
+        text = 'Sign up: ok';
+      } else {
+        text = `Sign up: failed (${data.message || 'unknown error'})`;
       }
-
-      document.getElementById('login-result').innerText = text;
-    });
-
-    // --- SECRET HELLO ---
-    document.getElementById('secret-button').addEventListener('click', async () => {
-      const token = localStorage.getItem('authToken');
-      if (!token) {
-        document.getElementById('secret-result').innerText =
-          'No token found – please login first.';
-        return;
-      }
-
-      const res = await fetch(`${baseUrl}/secret-hello`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-
-      try {
-        const data = await res.json();
-        document.getElementById('secret-result').innerText =
-          JSON.stringify(data, null, 2);
-      } catch (err) {
-        document.getElementById('secret-result').innerText =
-          `Error: HTTP ${res.status}`;
-      }
-    });
-
-    // If we already have a token (from earlier), show the secret section on load
-    if (localStorage.getItem('authToken')) {
-      document.getElementById('secret-section').style.display = 'block';
+    } catch (err) {
+      text = `Sign up: HTTP ${res.status}`;
     }
-  </script>
-</body>
-</html>
+
+    document.getElementById('signup-result').innerText = text;
+  });
+
+  // --- LOGIN ---
+  document.getElementById('login-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const email = document.getElementById('login-email').value;
+    const password = document.getElementById('login-password').value;
+
+    const res = await fetch(`${baseUrl}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    });
+
+    let text = 'Login failed';
+    try {
+      const data = await res.json();
+      text = `Login: ${data.status}`;
+
+      if (data.status === 'passed' && data.token) {
+        // Cache the token and show calc section
+        localStorage.setItem('authToken', data.token);
+        document.getElementById('calc-section').style.display = 'block';
+
+        // Reset calc UI, then load history and set current result from latest entry
+        resetCalcUI();
+        await loadHistory(); // this will also update currentResult
+      }
+    } catch (err) {
+      text = `Login: HTTP ${res.status}`;
+    }
+
+    document.getElementById('login-result').innerText = text;
+  });
+
+  // --- CALCULATOR ---
+  let currentResult = 0;
+
+  function getToken() {
+    return localStorage.getItem('authToken');
+  }
+
+  const currentResultInput = document.getElementById('current-result');
+  const newResultInput = document.getElementById('new-result');
+  const calcMessageDiv = document.getElementById('calc-message');
+
+  function resetCalcUI() {
+    currentResult = 0;
+    currentResultInput.value = 0;
+    newResultInput.value = '';
+    document.getElementById('calc-num').value = '';
+    document.getElementById('history-result').innerText = '';
+    calcMessageDiv.innerText = '';
+  }
+
+  document.getElementById('calc-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    calcMessageDiv.innerText = '';
+
+    const token = getToken();
+    if (!token) {
+      calcMessageDiv.innerText = 'Please login first.';
+      return;
+    }
+
+    const num = parseFloat(document.getElementById('calc-num').value);
+    const operation = document.getElementById('calc-op').value;
+
+    if (Number.isNaN(num)) {
+      calcMessageDiv.innerText = 'Please enter a valid number.';
+      return;
+    }
+
+    const res = await fetch(`${baseUrl}/calc`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify({ num, operation }),
+    });
+
+    try {
+      const data = await res.json();
+      if (res.ok) {
+        currentResult = data.result;
+        currentResultInput.value = currentResult;
+        newResultInput.value = data.result;
+        calcMessageDiv.innerText = `OK: ${data.expression} = ${data.result}`;
+        // Optionally auto-refresh history
+        await loadHistory();
+      } else {
+        calcMessageDiv.innerText = `Error: ${data.error || 'unknown error'}`;
+      }
+    } catch (err) {
+      calcMessageDiv.innerText = `Error: HTTP ${res.status}`;
+    }
+  });
+
+  // --- HISTORY ---
+  async function loadHistory() {
+    const token = getToken();
+    const historyResult = document.getElementById('history-result');
+
+    if (!token) {
+      historyResult.innerText = 'Please login first.';
+      return;
+    }
+
+    const res = await fetch(`${baseUrl}/history?limit=20&offset=0`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+
+    try {
+      const data = await res.json();
+      if (res.ok) {
+        // Show raw history JSON
+        historyResult.innerText = JSON.stringify(data, null, 2);
+
+        // If there is history, set currentResult to the latest entry's result
+        if (Array.isArray(data) && data.length > 0 && typeof data[0].result === 'number') {
+          currentResult = data[0].result;
+          currentResultInput.value = currentResult;
+          newResultInput.value = currentResult;
+        } else {
+          // No history yet → start from 0
+          currentResult = 0;
+          currentResultInput.value = 0;
+          newResultInput.value = '';
+        }
+      } else {
+        historyResult.innerText = `Error: ${data.error || 'unknown error'}`;
+      }
+    } catch (err) {
+      historyResult.innerText = `Error: HTTP ${res.status}`;
+    }
+  }
+
+  document.getElementById('history-button').addEventListener('click', loadHistory);
+
+  // --- On load: if we already have a token, show calculator and restore state from history ---
+  if (getToken()) {
+    document.getElementById('calc-section').style.display = 'block';
+    resetCalcUI();
+    loadHistory(); // no await needed here
+  }
+</script>

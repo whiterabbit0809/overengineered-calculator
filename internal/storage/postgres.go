@@ -12,11 +12,21 @@ import (
 
 const createUsersTableQuery = `
 CREATE TABLE IF NOT EXISTS users (
-    id         VARCHAR(50) PRIMARY KEY,
+    id         UUID PRIMARY KEY,
     email      TEXT NOT NULL UNIQUE,
     password   TEXT NOT NULL,
     created_at TIMESTAMP NOT NULL
 );
+`
+const createHistoryTable = `
+CREATE TABLE IF NOT EXISTS calc_history (
+    id          SERIAL PRIMARY KEY,
+    user_id     UUID        NOT NULL REFERENCES users(id),
+    expression  TEXT        NOT NULL,
+    result      DOUBLE PRECISION NOT NULL,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 `
 
 func NewPostgresDB() (*sql.DB, error) {
@@ -47,6 +57,10 @@ func NewPostgresDB() (*sql.DB, error) {
 	// Auto-create users table
 	if _, err := db.Exec(createUsersTableQuery); err != nil {
 		return nil, fmt.Errorf("create users table: %w", err)
+	}
+	// Auto-create calc_history table
+	if _, err := db.Exec(createHistoryTable); err != nil {
+		return nil, fmt.Errorf("create calc_history table: %w", err)
 	}
 
 	return db, nil

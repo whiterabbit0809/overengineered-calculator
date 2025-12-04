@@ -6,21 +6,29 @@ import (
 
 	"github.com/whiterabbit0809/overengineered-calculator/internal/auth"
 	"github.com/whiterabbit0809/overengineered-calculator/internal/calculator"
+	"github.com/whiterabbit0809/overengineered-calculator/internal/history"
 )
 
-func NewRouter(authHandler *auth.Handler, tokenService auth.TokenService) http.Handler {
+func NewRouter(
+	authHandler *auth.Handler,
+	tokenService auth.TokenService,
+	calcHandler *calculator.Handler,
+	historyHandler *history.Handler,
+) http.Handler {
 	mux := http.NewServeMux()
 
-	// Public routes
+	// Auth
 	mux.HandleFunc("/api/v1/auth/signup", authHandler.SignUp)
 	mux.HandleFunc("/api/v1/auth/login", authHandler.Login)
 
-	// Protected route: requires valid JWT
-	mux.Handle("/api/v1/secret-hello",
-		Chain(
-			http.HandlerFunc(calculator.SecretHelloHandler),
-			AuthMiddleware(tokenService),
-		))
+	// Calculator (protected)
+	mux.Handle("/api/v1/calc",
+		Chain(http.HandlerFunc(calcHandler.Calculate), AuthMiddleware(tokenService)),
+	)
+	// History (protected)
+	mux.Handle("/api/v1/history",
+		Chain(http.HandlerFunc(historyHandler.GetHistory), AuthMiddleware(tokenService)),
+	)
 
 	// Static frontend
 	fs := http.FileServer(http.Dir("web"))
