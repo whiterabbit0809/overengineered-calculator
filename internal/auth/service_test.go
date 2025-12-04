@@ -1,3 +1,4 @@
+// internal/auth/service_test.go
 package auth
 
 import (

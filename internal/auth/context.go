@@ -1,3 +1,4 @@
+// internal/auth/context.go
 package auth
 
 import "context"

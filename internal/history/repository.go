@@ -1,8 +1,10 @@
+// internal/history/repository.go
 package history
 
 import (
 	"context"
 	"database/sql"
+	"errors"
 )
 
 type Repository interface {
@@ -63,18 +65,22 @@ func (r *PostgresRepository) ListByUser(ctx context.Context, userID string, limi
 
 // GetLatestResult returns the last stored result for a user, or 0 if none exist.
 func (r *PostgresRepository) GetLatestResult(ctx context.Context, userID string) (float64, error) {
-	var result float64
-	err := r.DB.QueryRowContext(ctx,
-		`SELECT result
-         FROM calc_history
-         WHERE user_id = $1
-         ORDER BY created_at DESC
-         LIMIT 1`,
-		userID,
-	).Scan(&result)
+	row := r.DB.QueryRowContext(ctx, `
+        SELECT result
+        FROM calc_history
+        WHERE user_id = $1
+        ORDER BY created_at DESC
+        LIMIT 1
+    `, userID)
 
-	if err == sql.ErrNoRows {
+	var result float64
+	err := row.Scan(&result)
+	if errors.Is(err, sql.ErrNoRows) {
+		// No history yet → start from 0
 		return 0, nil
 	}
-	return result, err
+	if err != nil {
+		return 0, err
+	}
+	return result, nil
 }

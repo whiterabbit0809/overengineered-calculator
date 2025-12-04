@@ -1,3 +1,4 @@
+// internal/auth/token.go
 package auth
 
 import (

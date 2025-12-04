@@ -1,3 +1,4 @@
+// internal/calculator/model.go
 package calculator
 
 type Operation string
