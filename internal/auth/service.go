@@ -42,22 +42,22 @@ func NewAuthService(repo UserRepository, hasher PasswordHasher) AuthService {
 	}
 }
 
+// Email validation
 func validateEmail(email string) error {
 	if email == "" {
-		return errors.New("email is required")
+		return ErrInvalidEmailFormat
 	}
 
-	// Basic RFC-ish validation using net/mail
 	if _, err := mail.ParseAddress(email); err != nil {
-		return errors.New("invalid email format")
+		return ErrInvalidEmailFormat
 	}
-
 	return nil
 }
 
+// Password validation
 func validatePassword(pw string) error {
 	if len(pw) < 8 {
-		return errors.New("password must be at least 8 characters")
+		return ErrPasswordTooShort
 	}
 
 	var hasLetter, hasDigit bool
@@ -71,7 +71,7 @@ func validatePassword(pw string) error {
 	}
 
 	if !hasLetter || !hasDigit {
-		return errors.New("password must contain at least one letter and one digit")
+		return ErrPasswordTooWeak
 	}
 
 	return nil

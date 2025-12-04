@@ -7,26 +7,11 @@ import (
 	"net/http"
 )
 
-type Handler struct {
-	service      AuthService
-	tokenService TokenService
-}
-
 func NewHandler(service AuthService, tokenService TokenService) *Handler {
 	return &Handler{
 		service:      service,
 		tokenService: tokenService,
 	}
-}
-
-type signUpRequest struct {
-	Email    string `json:"email"`
-	Password string `json:"password"`
-}
-
-type signUpResponse struct {
-	Status  string `json:"status"`
-	Message string `json:"message,omitempty"`
 }
 
 func (h *Handler) SignUp(w http.ResponseWriter, r *http.Request) {
@@ -54,23 +39,44 @@ func (h *Handler) SignUp(w http.ResponseWriter, r *http.Request) {
 	if err := h.service.SignUp(r.Context(), req.Email, req.Password); err != nil {
 		w.Header().Set("Content-Type", "application/json")
 
-		// Map known domain errors explicitly
 		switch {
-		case errors.Is(err, ErrEmailAlreadyExists):
-			// Error for existing email
+		case errors.Is(err, ErrInvalidEmailFormat):
 			w.WriteHeader(http.StatusBadRequest)
 			_ = json.NewEncoder(w).Encode(signUpResponse{
 				Status:  "failed",
+				Field:   "email",
+				Message: "invalid email format",
+			})
+		case errors.Is(err, ErrPasswordTooShort):
+			w.WriteHeader(http.StatusBadRequest)
+			_ = json.NewEncoder(w).Encode(signUpResponse{
+				Status:  "failed",
+				Field:   "password",
+				Message: "password must be at least 8 characters",
+			})
+		case errors.Is(err, ErrPasswordTooWeak):
+			w.WriteHeader(http.StatusBadRequest)
+			_ = json.NewEncoder(w).Encode(signUpResponse{
+				Status:  "failed",
+				Field:   "password",
+				Message: "password must contain at least one letter and one digit",
+			})
+		case errors.Is(err, ErrEmailAlreadyExists):
+			w.WriteHeader(http.StatusBadRequest)
+			_ = json.NewEncoder(w).Encode(signUpResponse{
+				Status:  "failed",
+				Field:   "email",
 				Message: "email already exists",
 			})
 		default:
-			// Generic error
-			w.WriteHeader(http.StatusBadRequest)
+			// Unexpected internal error
+			w.WriteHeader(http.StatusInternalServerError)
 			_ = json.NewEncoder(w).Encode(signUpResponse{
 				Status:  "failed",
-				Message: err.Error(),
+				Message: "internal error",
 			})
 		}
+
 		return
 	}
 
@@ -78,16 +84,6 @@ func (h *Handler) SignUp(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(signUpResponse{
 		Status: "ok",
 	})
-}
-
-type loginRequest struct {
-	Email    string `json:"email"`
-	Password string `json:"password"`
-}
-
-type loginResponse struct {
-	Status string `json:"status"`          // "passed" or "failed"
-	Token  string `json:"token,omitempty"` // JWT token if passed
 }
 
 func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
