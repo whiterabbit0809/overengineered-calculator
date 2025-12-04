@@ -9,3 +9,15 @@ type HistoryEntry struct {
 	Result     float64   `json:"result"`
 	CreatedAt  time.Time `json:"createdAt"`
 }
+
+type Handler struct {
+	svc Service
+}
+
+type historyResponseEntry struct {
+	ID         int64   `json:"id"`
+	Expression string  `json:"expression"`
+	Result     float64 `json:"result"`
+	CreatedAt  string  `json:"createdAt"`
+	Email      string  `json:"email"`
+}

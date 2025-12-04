@@ -64,7 +64,6 @@
     <div id="calc-message" style="margin-top:0.5rem;"></div>
 
     <h3 style="margin-top:2rem;">History</h3>
-    <button id="history-button">Load history</button>
     <pre id="history-result" style="background:#f5f5f5; padding:0.5rem; max-height:300px; overflow:auto;"></pre>
   </section>
 
@@ -122,7 +121,7 @@
 
         // Reset calc UI, then load history and set current result from latest entry
         resetCalcUI();
-        await loadHistory(); // this will also update currentResult
+        await loadHistory(); // will also update currentResult from latest entry
       }
     } catch (err) {
       text = `Login: HTTP ${res.status}`;
@@ -141,13 +140,14 @@
   const currentResultInput = document.getElementById('current-result');
   const newResultInput = document.getElementById('new-result');
   const calcMessageDiv = document.getElementById('calc-message');
+  const historyResult = document.getElementById('history-result');
 
   function resetCalcUI() {
     currentResult = 0;
     currentResultInput.value = 0;
     newResultInput.value = '';
     document.getElementById('calc-num').value = '';
-    document.getElementById('history-result').innerText = '';
+    historyResult.innerText = '';
     calcMessageDiv.innerText = '';
   }
 
@@ -185,7 +185,7 @@
         currentResultInput.value = currentResult;
         newResultInput.value = data.result;
         calcMessageDiv.innerText = `OK: ${data.expression} = ${data.result}`;
-        // Optionally auto-refresh history
+        // Auto-refresh history after each calc
         await loadHistory();
       } else {
         calcMessageDiv.innerText = `Error: ${data.error || 'unknown error'}`;
@@ -198,7 +198,6 @@
   // --- HISTORY ---
   async function loadHistory() {
     const token = getToken();
-    const historyResult = document.getElementById('history-result');
 
     if (!token) {
       historyResult.innerText = 'Please login first.';
@@ -214,16 +213,27 @@
     try {
       const data = await res.json();
       if (res.ok) {
-        // Show raw history JSON
-        historyResult.innerText = JSON.stringify(data, null, 2);
+        // Format history entries as one line each:
+        // time  expression = result  email
+        if (Array.isArray(data) && data.length > 0) {
+          const lines = data.map((entry) => {
+            const time = entry.createdAt || entry.created_at || '';
+            const expr = entry.expression || '';
+            const result = typeof entry.result === 'number' ? entry.result : '';
+            const email = entry.email || ''; // backend will be updated to include this
 
-        // If there is history, set currentResult to the latest entry's result
-        if (Array.isArray(data) && data.length > 0 && typeof data[0].result === 'number') {
-          currentResult = data[0].result;
-          currentResultInput.value = currentResult;
-          newResultInput.value = currentResult;
+            return `${time}  ${expr} = ${result}${email ? '  ' + email : ''}`;
+          });
+          historyResult.innerText = lines.join('\n');
+
+          // Set currentResult from the latest entry (first element)
+          if (typeof data[0].result === 'number') {
+            currentResult = data[0].result;
+            currentResultInput.value = currentResult;
+            newResultInput.value = currentResult;
+          }
         } else {
-          // No history yet → start from 0
+          historyResult.innerText = 'No history yet.';
           currentResult = 0;
           currentResultInput.value = 0;
           newResultInput.value = '';
@@ -236,13 +246,11 @@
     }
   }
 
-  document.getElementById('history-button').addEventListener('click', loadHistory);
-
-  // --- On load: if we already have a token, show calculator and restore state from history ---
+  // --- On load: if a token already exists, show calculator and restore state from history ---
   if (getToken()) {
     document.getElementById('calc-section').style.display = 'block';
     resetCalcUI();
-    loadHistory(); // no await needed here
+    loadHistory(); // fire and forget
   }
 </script>
 </body>
