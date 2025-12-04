@@ -5,26 +5,26 @@ import (
 	"net/http"
 
 	"github.com/whiterabbit0809/overengineered-calculator/internal/auth"
+	"github.com/whiterabbit0809/overengineered-calculator/internal/calculator"
 )
 
-func NewRouter(authHandler *auth.Handler) http.Handler {
+func NewRouter(authHandler *auth.Handler, tokenService auth.TokenService) http.Handler {
 	mux := http.NewServeMux()
 
-	// --- API routes ---
+	// Public routes
 	mux.HandleFunc("/api/v1/auth/signup", authHandler.SignUp)
 	mux.HandleFunc("/api/v1/auth/login", authHandler.Login)
 
-	// --- Frontend route ---
-	// Serve index.html explicitly on "/"
-	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/" {
-			http.NotFound(w, r)
-			return
-		}
+	// Protected route: requires valid JWT
+	mux.Handle("/api/v1/secret-hello",
+		Chain(
+			http.HandlerFunc(calculator.SecretHelloHandler),
+			AuthMiddleware(tokenService),
+		))
 
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		http.ServeFile(w, r, "web/index.html")
-	})
+	// Static frontend
+	fs := http.FileServer(http.Dir("web"))
+	mux.Handle("/", fs)
 
 	return mux
 }

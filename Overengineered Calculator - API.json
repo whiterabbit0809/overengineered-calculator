@@ -1,0 +1,184 @@
+{
+	"info": {
+		"_postman_id": "57313a9b-26d1-4497-85ee-daa89cc09fc4",
+		"name": "Overengineered Calculator - Auth",
+		"description": "Auth endpoints for the Over-engineered Calculator backend.\n\nIncludes:\n- POST /api/v1/auth/signup\n- POST /api/v1/auth/login",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "50381264",
+		"_collection_link": "https://aske0809-8063191.postman.co/workspace/16e0a0bc-f985-4727-8605-4e758c76fac1/collection/50381264-57313a9b-26d1-4497-85ee-daa89cc09fc4?action=share&source=collection_link&creator=50381264"
+	},
+	"item": [
+		{
+			"name": "Auth - Signup",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"let jsonData;\r",
+							"\r",
+							"// JSON parse\r",
+							"pm.test(\"Response is valid JSON\", function () {\r",
+							"    jsonData = pm.response.json();\r",
+							"});\r",
+							"\r",
+							"// Allow 200 (ok) or 400 (duplicate)\r",
+							"pm.test(\"Status code is 200 or 400\", function () {\r",
+							"    pm.expect(pm.response.code).to.be.oneOf([200, 400]);\r",
+							"});\r",
+							"\r",
+							"// Must have status field\r",
+							"pm.test(\"Response has status field\", function () {\r",
+							"    pm.expect(jsonData).to.have.property(\"status\");\r",
+							"});\r",
+							"\r",
+							"// More specific\r",
+							"if (pm.response.code === 200) {\r",
+							"    pm.test(\"Signup succeeded => status is 'ok'\", function () {\r",
+							"        pm.expect(jsonData.status).to.eql(\"ok\");\r",
+							"    });\r",
+							"} else if (pm.response.code === 400) {\r",
+							"    pm.test(\"Signup failed => status is 'failed'\", function () {\r",
+							"        pm.expect(jsonData.status).to.eql(\"failed\");\r",
+							"    });\r",
+							"}"
+						],
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {}
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\"\n}"
+				},
+				"url": {
+					"raw": "{{baseUrl}}/api/v1/auth/signup",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"v1",
+						"auth",
+						"signup"
+					]
+				},
+				"description": "Create a new user with email + password.\n\nRequest body:\n{\n  \"email\": \"string\",\n  \"password\": \"string\"\n}\n\nResponse (success):\n{\n  \"status\": \"ok\"\n}\n\nResponse (failure):\n{\n  \"status\": \"failed\",\n  \"message\": \"...\"\n}"
+			},
+			"response": []
+		},
+		{
+			"name": "Auth - Login",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"let jsonData;\r",
+							"\r",
+							"// Status must be 200\r",
+							"pm.test(\"Status code is 200\", function () {\r",
+							"    pm.response.to.have.status(200);\r",
+							"});\r",
+							"\r",
+							"// JSON parse\r",
+							"pm.test(\"Response is valid JSON\", function () {\r",
+							"    jsonData = pm.response.json();\r",
+							"});\r",
+							"\r",
+							"// Must have status\r",
+							"pm.test(\"Response has status field\", function () {\r",
+							"    pm.expect(jsonData).to.have.property(\"status\");\r",
+							"});\r",
+							"\r",
+							"// Must be passed/failed\r",
+							"pm.test(\"Login status is 'passed' or 'failed'\", function () {\r",
+							"    pm.expect(jsonData.status).to.be.oneOf([\"passed\", \"failed\"]);\r",
+							"});"
+						],
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {}
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\"\n}"
+				},
+				"url": {
+					"raw": "{{baseUrl}}/api/v1/auth/login",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"v1",
+						"auth",
+						"login"
+					]
+				},
+				"description": "Login with an existing user.\n\nRequest body:\n{\n  \"email\": \"string\",\n  \"password\": \"string\"\n}\n\nResponse:\n{\n  \"status\": \"passed\" | \"failed\"\n}"
+			},
+			"response": []
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"requests": {},
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"requests": {},
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:8080"
+		},
+		{
+			"key": "email",
+			"value": "test@example.com"
+		},
+		{
+			"key": "password",
+			"value": "secret123"
+		}
+	]
+}

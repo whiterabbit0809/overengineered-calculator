@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/whiterabbit0809/overengineered-calculator/internal/auth"
 	httpserver "github.com/whiterabbit0809/overengineered-calculator/internal/http"
@@ -21,9 +22,16 @@ func main() {
 	userRepo := auth.NewPostgresUserRepository(db)
 	hasher := auth.NewBcryptPasswordHasher()
 	authService := auth.NewAuthService(userRepo, hasher)
-	authHandler := auth.NewHandler(authService)
 
-	router := httpserver.NewRouter(authHandler)
+	jwtSecret := os.Getenv("JWT_SECRET")
+	if jwtSecret == "" {
+		log.Fatal("JWT_SECRET is not set")
+	}
+	tokenService := auth.NewJWTTokenService(jwtSecret, "overengineered-calculator", 24*time.Hour)
+
+	authHandler := auth.NewHandler(authService, tokenService)
+
+	router := httpserver.NewRouter(authHandler, tokenService)
 
 	port := os.Getenv("PORT")
 	if port == "" {

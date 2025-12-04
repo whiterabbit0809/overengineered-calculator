@@ -27,9 +27,17 @@
     <div id="login-result"></div>
   </section>
 
+  <!-- New section for testing the protected endpoint -->
+  <section id="secret-section" style="display:none; margin-top: 2rem;">
+    <h2>Secret hello</h2>
+    <button id="secret-button">Call /api/v1/secret-hello</button>
+    <pre id="secret-result"></pre>
+  </section>
+
   <script>
     const baseUrl = '/api/v1';
 
+    // --- SIGNUP ---
     document.getElementById('signup-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       const email = document.getElementById('signup-email').value;
@@ -40,10 +48,19 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
       });
-      const data = await res.json();
-      document.getElementById('signup-result').innerText = `Sign up: ${data.status}`;
+
+      let text = 'Sign up failed';
+      try {
+        const data = await res.json();
+        text = `Sign up: ${data.status}`;
+      } catch (err) {
+        text = `Sign up: HTTP ${res.status}`;
+      }
+
+      document.getElementById('signup-result').innerText = text;
     });
 
+    // --- LOGIN ---
     document.getElementById('login-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       const email = document.getElementById('login-email').value;
@@ -54,9 +71,56 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
       });
-      const data = await res.json();
-      document.getElementById('login-result').innerText = `Login: ${data.status}`;
+
+      let text = 'Login failed';
+      try {
+        const data = await res.json();
+        text = `Login: ${data.status}`;
+
+        if (data.status === 'passed' && data.token) {
+          // Cache the token in localStorage for later use
+          localStorage.setItem('authToken', data.token);
+
+          // Show the secret section now that we have a token
+          document.getElementById('secret-section').style.display = 'block';
+        }
+      } catch (err) {
+        text = `Login: HTTP ${res.status}`;
+      }
+
+      document.getElementById('login-result').innerText = text;
     });
+
+    // --- SECRET HELLO ---
+    document.getElementById('secret-button').addEventListener('click', async () => {
+      const token = localStorage.getItem('authToken');
+      if (!token) {
+        document.getElementById('secret-result').innerText =
+          'No token found – please login first.';
+        return;
+      }
+
+      const res = await fetch(`${baseUrl}/secret-hello`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      try {
+        const data = await res.json();
+        document.getElementById('secret-result').innerText =
+          JSON.stringify(data, null, 2);
+      } catch (err) {
+        document.getElementById('secret-result').innerText =
+          `Error: HTTP ${res.status}`;
+      }
+    });
+
+    // If we already have a token (from earlier), show the secret section on load
+    if (localStorage.getItem('authToken')) {
+      document.getElementById('secret-section').style.display = 'block';
+    }
   </script>
 </body>
 </html>

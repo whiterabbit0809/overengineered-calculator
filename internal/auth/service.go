@@ -16,12 +16,21 @@ var (
 
 type AuthService interface {
 	SignUp(ctx context.Context, email, password string) error
-	Login(ctx context.Context, email, password string) (bool, error) // passed/failed
+	Login(ctx context.Context, email, password string) (bool, error)
+	GetUserByEmail(ctx context.Context, email string) (*User, error)
 }
 
 type authService struct {
 	repo   UserRepository
 	hasher PasswordHasher
+}
+
+func (s *authService) GetUserByEmail(ctx context.Context, email string) (*User, error) {
+	user, err := s.repo.FindByEmail(ctx, email)
+	if err != nil {
+		return nil, err
+	}
+	return &user, nil
 }
 
 func NewAuthService(repo UserRepository, hasher PasswordHasher) AuthService {

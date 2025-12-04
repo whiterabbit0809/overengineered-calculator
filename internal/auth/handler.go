@@ -7,11 +7,15 @@ import (
 )
 
 type Handler struct {
-	service AuthService
+	service      AuthService
+	tokenService TokenService
 }
 
-func NewHandler(service AuthService) *Handler {
-	return &Handler{service: service}
+func NewHandler(service AuthService, tokenService TokenService) *Handler {
+	return &Handler{
+		service:      service,
+		tokenService: tokenService,
+	}
 }
 
 type signUpRequest struct {
@@ -58,7 +62,8 @@ type loginRequest struct {
 }
 
 type loginResponse struct {
-	Status string `json:"status"` // "passed" or "failed"
+	Status string `json:"status"`          // "passed" or "failed"
+	Token  string `json:"token,omitempty"` // JWT token if passed
 }
 
 func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
@@ -73,17 +78,31 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	passed, err := h.service.Login(r.Context(), req.Email, req.Password)
+	ok, err := h.service.Login(r.Context(), req.Email, req.Password)
 	if err != nil {
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
 
-	resp := loginResponse{
-		Status: "failed",
-	}
-	if passed {
+	resp := loginResponse{Status: "failed"}
+
+	if ok {
+		// Load the user (we know they exist & password was correct)
+		user, err := h.service.GetUserByEmail(r.Context(), req.Email)
+		if err != nil {
+			http.Error(w, "internal error", http.StatusInternalServerError)
+			return
+		}
+
+		// Generate JWT token
+		token, err := h.tokenService.GenerateToken(user)
+		if err != nil {
+			http.Error(w, "internal error", http.StatusInternalServerError)
+			return
+		}
+
 		resp.Status = "passed"
+		resp.Token = token
 	}
 
 	w.Header().Set("Content-Type", "application/json")

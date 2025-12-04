@@ -1,0 +1,25 @@
+# Go build
+server
+bin/
+*.exe
+
+# Go modules cache
+vendor/
+
+# Logs
+*.log
+
+# IDE/editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS-specific
+.DS_Store
+
+# Env files
+.env
+
+# postman folder
+.postman/
