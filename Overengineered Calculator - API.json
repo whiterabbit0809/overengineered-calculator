@@ -141,6 +141,94 @@
 				"description": "Login with an existing user.\n\nRequest body:\n{\n  \"email\": \"string\",\n  \"password\": \"string\"\n}\n\nResponse:\n{\n  \"status\": \"passed\" | \"failed\"\n}"
 			},
 			"response": []
+		},
+		{
+			"name": "Secret-Hello",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Secret hello: status code 200\", function () {\r",
+							"    pm.expect(pm.response.code).to.eql(200);\r",
+							"});\r",
+							"\r",
+							"pm.test(\"Secret hello: response is JSON\", function () {\r",
+							"    pm.response.to.be.withBody;\r",
+							"    pm.response.to.be.json;\r",
+							"});\r",
+							"\r",
+							"pm.test(\"Secret hello: contains user info\", function () {\r",
+							"    const json = pm.response.json();\r",
+							"    pm.expect(json).to.have.property(\"message\");\r",
+							"    pm.expect(json.message).to.be.a(\"string\");\r",
+							"\r",
+							"    // Adjust these if your JSON keys are different:\r",
+							"    pm.expect(json).to.have.property(\"userId\");\r",
+							"    pm.expect(json).to.have.property(\"email\");\r",
+							"});\r",
+							""
+						],
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {}
+					}
+				},
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"console.log(\"[Secret hello] authToken (collection):\", pm.collectionVariables.get(\"authToken\"));\r",
+							"console.log(\"[Secret hello] authToken (any scope):\", pm.variables.get(\"authToken\"));\r",
+							""
+						],
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {}
+					}
+				}
+			],
+			"protocolProfileBehavior": {
+				"disableBodyPruning": true
+			},
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "",
+						"type": "text",
+						"disabled": true
+					},
+					{
+						"key": "Authorization",
+						"value": "Bearer {{authToken}}",
+						"description": "JWT from login",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{baseUrl}}/api/v1/secret-hello",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"v1",
+						"secret-hello"
+					]
+				}
+			},
+			"response": []
 		}
 	],
 	"event": [
@@ -179,6 +267,11 @@
 		{
 			"key": "password",
 			"value": "secret123"
+		},
+		{
+			"key": "authToken",
+			"value": "",
+			"type": "default"
 		}
 	]
 }
