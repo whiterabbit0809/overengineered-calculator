@@ -9,11 +9,23 @@ import (
 	"github.com/whiterabbit0809/overengineered-calculator/internal/auth"
 )
 
+// NewHandler constructs a new History HTTP handler.
+func NewHandler(svc Service) *Handler {
+	return &Handler{svc: svc}
+}
+
+// GetHistory handles GET /api/v1/history?limit=&offset=
+//
+// It:
+//   - Reads the authenticated user (ID + email) from context.
+//   - Parses limit/offset with defaults (20, 0).
+//   - Asks the History service for that user's entries.
+//   - Returns a JSON array where each item includes email.
 func (h *Handler) GetHistory(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	q := r.URL.Query()
 
-	// Parse pagination parameters with defaults: limit=20, offset=0
+	// Pagination defaults
 	limit := 20
 	if v := q.Get("limit"); v != "" {
 		if parsed, err := strconv.Atoi(v); err == nil && parsed > 0 {
@@ -50,14 +62,14 @@ func (h *Handler) GetHistory(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Build response with email and formatted time
+	// Map HistoryEntry -> historyResponseEntry and attach email
 	resp := make([]historyResponseEntry, len(entries))
 	for i, e := range entries {
 		resp[i] = historyResponseEntry{
 			ID:         e.ID,
 			Expression: e.Expression,
 			Result:     e.Result,
-			CreatedAt:  e.CreatedAt.Format(time.RFC3339),
+			CreatedAt:  e.CreatedAt.Format(time.RFC3339), // or another format if you prefer
 			Email:      email,
 		}
 	}
