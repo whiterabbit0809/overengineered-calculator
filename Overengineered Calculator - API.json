@@ -1,11 +1,11 @@
 {
 	"info": {
-		"_postman_id": "57313a9b-26d1-4497-85ee-daa89cc09fc4",
-		"name": "Overengineered Calculator - Auth",
+		"_postman_id": "9c752af4-a2c1-4402-800e-963ebe1775eb",
+		"name": "Overengineered Calculator - API",
 		"description": "Auth endpoints for the Over-engineered Calculator backend.\n\nIncludes:\n- POST /api/v1/auth/signup\n- POST /api/v1/auth/login",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
 		"_exporter_id": "50381264",
-		"_collection_link": "https://aske0809-8063191.postman.co/workspace/16e0a0bc-f985-4727-8605-4e758c76fac1/collection/50381264-57313a9b-26d1-4497-85ee-daa89cc09fc4?action=share&source=collection_link&creator=50381264"
+		"_collection_link": "https://aske0809-8063191.postman.co/workspace/16e0a0bc-f985-4727-8605-4e758c76fac1/collection/50381264-9c752af4-a2c1-4402-800e-963ebe1775eb?action=share&source=collection_link&creator=50381264"
 	},
 	"item": [
 		{
@@ -41,7 +41,12 @@
 							"    pm.test(\"Signup failed => status is 'failed'\", function () {\r",
 							"        pm.expect(jsonData.status).to.eql(\"failed\");\r",
 							"    });\r",
-							"}"
+							"}\r",
+							"pm.test(\"Signup: status must be ok\", function () {\r",
+							"    const json = pm.response.json();\r",
+							"    pm.expect(json.status).to.eql(\"ok\");\r",
+							"});\r",
+							""
 						],
 						"type": "text/javascript",
 						"packages": {},
@@ -50,6 +55,9 @@
 				}
 			],
 			"request": {
+				"auth": {
+					"type": "noauth"
+				},
 				"method": "POST",
 				"header": [
 					{
@@ -85,27 +93,43 @@
 					"listen": "test",
 					"script": {
 						"exec": [
-							"let jsonData;\r",
-							"\r",
-							"// Status must be 200\r",
-							"pm.test(\"Status code is 200\", function () {\r",
-							"    pm.response.to.have.status(200);\r",
+							"pm.test(\"Login: status code is 200\", function () {\r",
+							"    pm.expect(pm.response.code).to.eql(200);\r",
 							"});\r",
 							"\r",
-							"// JSON parse\r",
-							"pm.test(\"Response is valid JSON\", function () {\r",
-							"    jsonData = pm.response.json();\r",
+							"pm.test(\"Login: response is JSON\", function () {\r",
+							"    pm.response.to.be.withBody;\r",
+							"    pm.response.to.be.json;\r",
 							"});\r",
 							"\r",
-							"// Must have status\r",
-							"pm.test(\"Response has status field\", function () {\r",
-							"    pm.expect(jsonData).to.have.property(\"status\");\r",
+							"pm.test(\"Login: status is passed or failed\", function () {\r",
+							"    const json = pm.response.json();\r",
+							"    pm.expect(json).to.have.property(\"status\");\r",
+							"    pm.expect(json.status).to.be.oneOf([\"passed\", \"failed\"]);\r",
 							"});\r",
 							"\r",
-							"// Must be passed/failed\r",
-							"pm.test(\"Login status is 'passed' or 'failed'\", function () {\r",
-							"    pm.expect(jsonData.status).to.be.oneOf([\"passed\", \"failed\"]);\r",
-							"});"
+							"// Only check for token if login actually passed\r",
+							"pm.test(\"Login: token present when passed\", function () {\r",
+							"    const json = pm.response.json();\r",
+							"    if (json.status === \"passed\") {\r",
+							"        pm.expect(json).to.have.property(\"token\");\r",
+							"        pm.expect(json.token).to.be.a(\"string\").that.is.not.empty;\r",
+							"    }\r",
+							"});\r",
+							"\r",
+							"pm.collectionVariables.unset(\"authToken\");\r",
+							"\r",
+							"// Save token to collection variable on successful login\r",
+							"(function () {\r",
+							"    const json = pm.response.json();\r",
+							"    if (json.status === \"passed\" && json.token) {\r",
+							"        pm.collectionVariables.set(\"authToken\", json.token);\r",
+							"        console.log(\"Saved authToken:\", json.token);\r",
+							"    } else {\r",
+							"        console.log(\"Login failed – authToken not set\");\r",
+							"    }\r",
+							"})();\r",
+							""
 						],
 						"type": "text/javascript",
 						"packages": {},
@@ -114,6 +138,9 @@
 				}
 			],
 			"request": {
+				"auth": {
+					"type": "noauth"
+				},
 				"method": "POST",
 				"header": [
 					{
@@ -143,43 +170,33 @@
 			"response": []
 		},
 		{
-			"name": "Secret-Hello",
+			"name": "Calc: ADD 1",
 			"event": [
 				{
 					"listen": "test",
 					"script": {
 						"exec": [
-							"pm.test(\"Secret hello: status code 200\", function () {\r",
+							"pm.test(\"Calc: status code 200\", function () {\r",
 							"    pm.expect(pm.response.code).to.eql(200);\r",
 							"});\r",
 							"\r",
-							"pm.test(\"Secret hello: response is JSON\", function () {\r",
-							"    pm.response.to.be.withBody;\r",
-							"    pm.response.to.be.json;\r",
+							"pm.test(\"Calc: response is JSON\", function () {\r",
+							"    pm.response.to.have.jsonBody();\r",
 							"});\r",
 							"\r",
-							"pm.test(\"Secret hello: contains user info\", function () {\r",
+							"pm.test(\"Calc: has expression and result\", function () {\r",
 							"    const json = pm.response.json();\r",
-							"    pm.expect(json).to.have.property(\"message\");\r",
-							"    pm.expect(json.message).to.be.a(\"string\");\r",
-							"\r",
-							"    // Adjust these if your JSON keys are different:\r",
-							"    pm.expect(json).to.have.property(\"userId\");\r",
-							"    pm.expect(json).to.have.property(\"email\");\r",
+							"    pm.expect(json).to.have.property(\"expression\");\r",
+							"    pm.expect(json).to.have.property(\"result\");\r",
+							"    pm.expect(json.result).to.be.a(\"number\");\r",
 							"});\r",
-							""
-						],
-						"type": "text/javascript",
-						"packages": {},
-						"requests": {}
-					}
-				},
-				{
-					"listen": "prerequest",
-					"script": {
-						"exec": [
-							"console.log(\"[Secret hello] authToken (collection):\", pm.collectionVariables.get(\"authToken\"));\r",
-							"console.log(\"[Secret hello] authToken (any scope):\", pm.variables.get(\"authToken\"));\r",
+							"\r",
+							"// Save lastResult for later history check\r",
+							"(function () {\r",
+							"    const json = pm.response.json();\r",
+							"    pm.collectionVariables.set(\"lastResult\", json.result);\r",
+							"    console.log(\"Saved lastResult:\", json.result);\r",
+							"})();\r",
 							""
 						],
 						"type": "text/javascript",
@@ -188,28 +205,12 @@
 					}
 				}
 			],
-			"protocolProfileBehavior": {
-				"disableBodyPruning": true
-			},
 			"request": {
-				"method": "GET",
-				"header": [
-					{
-						"key": "Authorization",
-						"value": "",
-						"type": "text",
-						"disabled": true
-					},
-					{
-						"key": "Authorization",
-						"value": "Bearer {{authToken}}",
-						"description": "JWT from login",
-						"type": "text"
-					}
-				],
+				"method": "POST",
+				"header": [],
 				"body": {
 					"mode": "raw",
-					"raw": "",
+					"raw": "{\r\n  \"num\": 1,\r\n  \"operation\": \"ADD\"\r\n}",
 					"options": {
 						"raw": {
 							"language": "json"
@@ -217,20 +218,342 @@
 					}
 				},
 				"url": {
-					"raw": "{{baseUrl}}/api/v1/secret-hello",
+					"raw": "{{baseUrl}}/api/v1/calc",
 					"host": [
 						"{{baseUrl}}"
 					],
 					"path": [
 						"api",
 						"v1",
-						"secret-hello"
+						"calc"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Calc: SUBTRACT 2",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Calc SUBTRACT: status code 200\", function () {\r",
+							"    pm.expect(pm.response.code).to.eql(200);\r",
+							"});\r",
+							"\r",
+							"pm.test(\"Calc SUBTRACT: response is JSON\", function () {\r",
+							"    pm.response.to.have.jsonBody();\r",
+							"});\r",
+							"\r",
+							"pm.test(\"Calc SUBTRACT: has expression and result\", function () {\r",
+							"    const json = pm.response.json();\r",
+							"    pm.expect(json).to.have.property(\"expression\");\r",
+							"    pm.expect(json).to.have.property(\"result\");\r",
+							"    pm.expect(json.result).to.be.a(\"number\");\r",
+							"});\r",
+							"\r",
+							"// Save lastResult for history check\r",
+							"(function () {\r",
+							"    const json = pm.response.json();\r",
+							"    pm.collectionVariables.set(\"lastResult\", json.result);\r",
+							"    console.log(\"Calc SUBTRACT: lastResult =\", json.result);\r",
+							"})();\r",
+							""
+						],
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {}
+					}
+				}
+			],
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "{{authToken}}",
+							"type": "string"
+						}
+					]
+				},
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n  \"num\": 2,\r\n  \"operation\": \"SUBTRACT\"\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{baseUrl}}/api/v1/calc",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"v1",
+						"calc"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Calc: MULTIPLY 3",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Calc MULTIPLY: status code 200\", function () {\r",
+							"    pm.expect(pm.response.code).to.eql(200);\r",
+							"});\r",
+							"\r",
+							"pm.test(\"Calc MULTIPLY: response is JSON\", function () {\r",
+							"    pm.response.to.have.jsonBody();\r",
+							"});\r",
+							"\r",
+							"pm.test(\"Calc MULTIPLY: has expression and result\", function () {\r",
+							"    const json = pm.response.json();\r",
+							"    pm.expect(json).to.have.property(\"expression\");\r",
+							"    pm.expect(json).to.have.property(\"result\");\r",
+							"    pm.expect(json.result).to.be.a(\"number\");\r",
+							"});\r",
+							"\r",
+							"// Save lastResult for history check\r",
+							"(function () {\r",
+							"    const json = pm.response.json();\r",
+							"    pm.collectionVariables.set(\"lastResult\", json.result);\r",
+							"    console.log(\"Calc MULTIPLY: lastResult =\", json.result);\r",
+							"})();\r",
+							""
+						],
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {}
+					}
+				}
+			],
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "{{authToken}}",
+							"type": "string"
+						}
+					]
+				},
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n  \"num\": 3,\r\n  \"operation\": \"MULTIPLY\"\r\n}\r\n",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{baseUrl}}/api/v1/calc",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"v1",
+						"calc"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Calc: DIVIDE 2",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Calc DIVIDE: status code 200\", function () {\r",
+							"    pm.expect(pm.response.code).to.eql(200);\r",
+							"});\r",
+							"\r",
+							"pm.test(\"Calc DIVIDE: response is JSON\", function () {\r",
+							"    pm.response.to.have.jsonBody();\r",
+							"});\r",
+							"\r",
+							"pm.test(\"Calc DIVIDE: has expression and result\", function () {\r",
+							"    const json = pm.response.json();\r",
+							"    pm.expect(json).to.have.property(\"expression\");\r",
+							"    pm.expect(json).to.have.property(\"result\");\r",
+							"    pm.expect(json.result).to.be.a(\"number\");\r",
+							"});\r",
+							"\r",
+							"// Save lastResult for history check\r",
+							"(function () {\r",
+							"    const json = pm.response.json();\r",
+							"    pm.collectionVariables.set(\"lastResult\", json.result);\r",
+							"    console.log(\"Calc DIVIDE: lastResult =\", json.result);\r",
+							"})();\r",
+							""
+						],
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {}
+					}
+				}
+			],
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "{{authToken}}",
+							"type": "string"
+						}
+					]
+				},
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n  \"num\": 2,\r\n  \"operation\": \"DIVIDE\"\r\n}\r\n",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{baseUrl}}/api/v1/calc",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"v1",
+						"calc"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Get HISTORY",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"History: status code 200\", function () {\r",
+							"    pm.expect(pm.response.code).to.eql(200);\r",
+							"});\r",
+							"\r",
+							"pm.test(\"History: response is JSON array\", function () {\r",
+							"    const json = pm.response.json();\r",
+							"    pm.expect(json).to.be.an(\"array\");\r",
+							"});\r",
+							"\r",
+							"pm.test(\"History: first entry has required fields\", function () {\r",
+							"    const json = pm.response.json();\r",
+							"    pm.expect(json.length).to.be.greaterThan(0);\r",
+							"\r",
+							"    const first = json[0];\r",
+							"    pm.expect(first).to.have.property(\"expression\");\r",
+							"    pm.expect(first).to.have.property(\"result\");\r",
+							"    pm.expect(first).to.have.property(\"createdAt\");\r",
+							"    pm.expect(first).to.have.property(\"email\");\r",
+							"});\r",
+							"\r",
+							"pm.test(\"History: first entry email matches collection email\", function () {\r",
+							"    const json = pm.response.json();\r",
+							"    pm.expect(json.length).to.be.greaterThan(0);\r",
+							"\r",
+							"    const first = json[0];\r",
+							"    const expectedEmail = pm.collectionVariables.get(\"email\");\r",
+							"    pm.expect(first.email).to.eql(expectedEmail);\r",
+							"});\r",
+							"\r",
+							"pm.test(\"History: first entry result matches lastResult\", function () {\r",
+							"    const json = pm.response.json();\r",
+							"    pm.expect(json.length).to.be.greaterThan(0);\r",
+							"\r",
+							"    const first = json[0];\r",
+							"    const lastResult = Number(pm.collectionVariables.get(\"lastResult\"));\r",
+							"\r",
+							"    pm.expect(first.result).to.eql(lastResult);\r",
+							"});\r",
+							"\r",
+							"// Optional: log last few history lines for visual check\r",
+							"(function () {\r",
+							"    const json = pm.response.json();\r",
+							"    console.log(\"History entries (top 3):\", json.slice(0, 3));\r",
+							"})();\r",
+							""
+						],
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {}
+					}
+				}
+			],
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "{{authToken}}",
+							"type": "string"
+						}
+					]
+				},
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{baseUrl}}/api/v1/history?limit=20&offset=0",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"v1",
+						"history"
+					],
+					"query": [
+						{
+							"key": "limit",
+							"value": "20"
+						},
+						{
+							"key": "offset",
+							"value": "0"
+						}
 					]
 				}
 			},
 			"response": []
 		}
 	],
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "{{authToken}}",
+				"type": "string"
+			}
+		]
+	},
 	"event": [
 		{
 			"listen": "prerequest",
@@ -269,9 +592,12 @@
 			"value": "secret123"
 		},
 		{
+			"key": "lastResult",
+			"value": ""
+		},
+		{
 			"key": "authToken",
-			"value": "",
-			"type": "default"
+			"value": ""
 		}
 	]
 }
