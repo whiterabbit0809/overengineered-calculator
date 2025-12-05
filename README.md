@@ -1,13 +1,40 @@
-# Over-engineered Calculator (Go)
+# Overengineered Calculator (Go backend)
 
-Backend project in Go for an "over-engineered" calculator service.
+Small over-engineered backend in Go with email/password auth, JWT-based protected endpoints, a stateful calculator, and per-user calculation history stored in PostgreSQL. Deployed as a Dockerized app on Render, with a tiny HTML UI and a Postman collection for tests.
 
-The goal of the project is to build a small but realistic backend system with:
+## Features
 
-- Clear separation of concerns
-- Testable business logic
-- REST API
-- Dockerized deployment
-- microservice-friendly structure, auth, and a small web UI
+- Email/password signup & login (bcrypt-hashed passwords)
+- JWT authentication (`Authorization: Bearer <token>`)
+- Stateful calculator (ADD, SUBTRACT, MULTIPLY, DIVIDE)
+- Per-user calculation history in Postgres
+- Minimal HTML frontend for manual testing
+- Postman collection for end-to-end tests
+- Unit tests for auth and calculator logic
 
-_Current status: auth service + basic web UI are implemented. Calculator and history will be added on top of this architecture._
+## Tech stack
+
+- Go 1.x (net/http, database/sql)
+- PostgreSQL
+- JWT (github.com/golang-jwt/jwt/v5)
+- bcrypt (golang.org/x/crypto/bcrypt)
+- Docker + docker-compose
+- Render Web Service
+- Postman, testify
+
+## API
+
+All endpoints are served under the `/api/v1` prefix.
+
+- Auth endpoints:
+  - `POST /api/v1/auth/signup`
+  - `POST /api/v1/auth/login`
+- Calculator:
+  - `POST /api/v1/calc` (protected)
+- History:
+  - `GET /api/v1/history` (protected)
+
+Protected endpoints require:
+
+```http
+Authorization: Bearer <jwt-token>

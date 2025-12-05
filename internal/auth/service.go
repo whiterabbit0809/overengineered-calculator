@@ -28,11 +28,11 @@ type authService struct {
 }
 
 func (s *authService) GetUserByEmail(ctx context.Context, email string) (*User, error) {
-	user, err := s.repo.FindByEmail(ctx, email)
+	User, err := s.repo.FindByEmail(ctx, email)
 	if err != nil {
 		return nil, err
 	}
-	return &user, nil
+	return &User, nil
 }
 
 func NewAuthService(repo UserRepository, hasher PasswordHasher) AuthService {
